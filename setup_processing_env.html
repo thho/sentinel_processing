@@ -11,7 +11,7 @@
 
 <meta name="author" content="Thorsten Höser, thorsten.hoser@gmail.com, Researchgate, GitHub" />
 
-<meta name="date" content="2018-11-25" />
+<meta name="date" content="2018-12-02" />
 
 <title>Processing Sentinel Data</title>
 
@@ -229,7 +229,7 @@ div.tocify {
 <h1 class="title toc-ignore">Processing Sentinel Data</h1>
 <h3 class="subtitle"><em>General Setup for processing</em></h3>
 <h4 class="author"><em>Thorsten Höser, <a href="mailto:thorsten.hoser@gmail.com">thorsten.hoser@gmail.com</a>, <a href="https://www.researchgate.net/profile/Thorsten_Hoeser">Researchgate</a>, <a href="https://github.com/thho">GitHub</a></em></h4>
-<h4 class="date"><em>2018-11-25</em></h4>
+<h4 class="date"><em>2018-12-02</em></h4>
 
 </div>
 
@@ -245,22 +245,24 @@ Important to mention is that all instructions were tested on an Ubuntu 18.4 Bion
 </div>
 <div id="installations" class="section level1">
 <h1>Installations</h1>
-<div id="python-3.x" class="section level2">
-<h2>Python 3.x</h2>
-<p>To install Python I use Anaconda. I would recommend doing this for several reasons, for instance, you can easily set up a new Python environment with conda for other projects, without messing up Python and module versions etc.</p>
+<div id="python-2.7" class="section level2">
+<h2>Python 2.7</h2>
+<p>To install Python I use Anaconda2. I would recommend doing this for several reasons, for instance, you can easily set up a new Python environment with conda for other projects, without messing up Python and module versions etc. It is even rather easy to install anaconda2 to have a Python 3.x available. Using Anaconda to hanlde all your needs with Python versions of all kinds works surprisingly smooth.</p>
 <p><a href="https://docs.anaconda.com/anaconda/install/linux">Here</a> are the steps I followed for installation, a short summary:</p>
-<p>Go to <a href="https://www.anaconda.com/download/#linux" class="uri">https://www.anaconda.com/download/#linux</a> and download Anaconda3.</p>
+<p>Go to <a href="https://www.anaconda.com/download/#linux" class="uri">https://www.anaconda.com/download/#linux</a> and download Anaconda2.</p>
 <pre class="bash"><code>#in terminal
 #maybe you have to change the version number
-bash ~/Downloads/Anaconda3-5.3.1-Linux-x86_64.sh
+bash ~/Downloads/Anaconda2-5.3.1-Linux-x86_64.sh
 #agree to the license terms 
 #choose an installation folder
 #add anaconda installation to the PATH environment</code></pre>
 </div>
 <div id="spyder" class="section level2">
 <h2>Spyder</h2>
-<p>As development environment I use Spyder to develop new scripts. Again, you can choose what you like to use. For editing existing scripts, I often just use Kate (or an other editor like vim or nano) and later run the scripts from terminal. So we will work with both, Kate, vim or nano which are often installed depending on the Unix distribution you have chosen and Spyder. To install Spyder do:</p>
-<pre class="bash"><code>#in terminal
+<p>As development environment I use Spyder to develop new scripts. Again, you can choose what you like to use. For editing existing scripts, I often just use Kate (or an other editor like vim or nano) and later run the scripts from terminal. So we will work with both, Kate, vim or nano which are often installed depending on the Unix distribution you have chosen and Spyder. Spyder should be installed if you have installed Anaconda, therfore try:</p>
+<pre class="bash"><code>spyder
+#Spyder should open, it maybe take some time, be patient
+#if not do
 sudo apt install spyder</code></pre>
 </div>
 <div id="snap-toolbox-6.0" class="section level2">
@@ -283,9 +285,9 @@ sudo apt install python-jpy</code></pre>
 <p>It tells you to do:</p>
 <pre class="bash"><code>#in terminal
 cd &lt;snap-install-dir&gt;/bin
-./snappy-conf /home/&lt;user&gt;/anaconda3/bin/python</code></pre>
-<p>If it works, go to /home/&lt;user&gt;/.snap/snap-python/ and copy the snappy folder to the site-package folder of your python installation /home/&lt;user&gt;/anaconda23lib/python2.7/site-packages/</p>
-<pre class="bash"><code>cp -r /home/user/.snap/snap-python/snappy /home/user/anaconda2/lib/python3.7/site-packages</code></pre>
+./snappy-conf /home/&lt;user&gt;/anaconda2/bin/python</code></pre>
+<p>If it works, go to /home/&lt;user&gt;/.snap/snap-python/ and copy the snappy folder to the site-package folder of your python installation /home/&lt;user&gt;/anaconda2/lib/python2.7/site-packages/</p>
+<pre class="bash"><code>cp -r /home/user/.snap/snap-python/snappy /home/user/anaconda2/lib/python2.7/site-packages</code></pre>
 <p>To test if all is right, call python:</p>
 <pre class="bash"><code>python</code></pre>
 <p>and run this lines in python, use F9 to run selected lines or the line your courser is in, when using spyder.</p>
@@ -295,8 +297,8 @@ list(p.getBandNames())</code></pre>
 <p>your output should look like this:</p>
 <p>[‘radiance_1’, ‘radiance_2’, ‘radiance_3’, ‘radiance_4’, ‘radiance_5’, ‘radiance_6’, ‘radiance_7’, ‘radiance_8’, ‘radiance_9’, ‘radiance_10’, ‘radiance_11’, ‘radiance_12’, ‘radiance_13’, ‘radiance_14’, ‘radiance_15’, ‘l1_flags’, ‘detector_index’]</p>
 <p>If the configuration returns an error, I followed the hints found in the Step Forum by <a href="http://forum.step.esa.int/users/marpet/activity">marpet</a> on the 19th of September <a href="http://forum.step.esa.int/t/snappy-installation-on-linux-redhat-6-9/7091/4">in this thread</a>.</p>
-<p>Copy the snappy folder /home/&lt;user&gt;/.snap/snap-python/snappy/ to the site-package folder of your python installation /home/&lt;user&gt;/anaconda3/lib/python3.7/site-packages/.</p>
-<pre class="bash"><code>cp -r /home/user/.snap/snap-python/snappy /home/user/anaconda3/lib/python3.7/site-packages</code></pre>
+<p>Copy the snappy folder /home/&lt;user&gt;/.snap/snap-python/snappy/ to the site-package folder of your python installation /home/&lt;user&gt;/anaconda2/lib/python2.7/site-packages/.</p>
+<pre class="bash"><code>cp -r /home/user/.snap/snap-python/snappy /home/user/anaconda2/lib/python2.7/site-packages</code></pre>
 <p>I think, the snappy folder you have just copied, was created when you tried to configure snappy and it ended with an error, therefore the snappy.ini file in the folder is empty by now. Enter the copied folder and create or overwrite a file named snappy.ini with a text editor including this content:</p>
 <p>[DEFAULT]<br />
 snap_home = /home/&lt;user&gt;/snap<br />
@@ -328,6 +330,28 @@ pip install sentinelsat</code></pre>
 <h2>pygeoj</h2>
 <p>pygeoj is a python module to read, write and work with the GeoJSON format. Have a <a href="http://pythonhosted.org/PyGeoj/">look here</a>.</p>
 <pre class="bash"><code>pip install pygeoj</code></pre>
+</div>
+<div id="r" class="section level2">
+<h2>R</h2>
+<p><a href="https://www.r-project.org/">R</a> is used for some data converting and postprocessing as well as visualizing results.</p>
+<pre class="bash"><code>#install R
+sudo add-apt-repository 'deb https://cloud.r-project.org/bin/linux/ubuntu bionic-cran35/'
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E084DAB9
+sudo apt update
+sudo apt install r-base r-base-core r-recommended
+sudo add-apt-repository ppa:marutter/c2d4u3.5
+sudo apt-get update
+sudo apt install r-cran-rgl r-cran-rjags r-cran-snow r-cran-ggplot2 r-cran-igraph r-cran-lme4 r-cran-rjava r-cran-devtools r-cran-roxygen2 r-cran-rjava r-cran-xlsx
+sudo add-apt-repository 'deb http://ppa.launchpad.net/ubuntugis/ubuntugis-unstable/ubuntu bionic main '
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 314DF160
+sudo apt update
+sudo apt install libgdal-dev libproj-dev libgeos-dev libudunits2-dev libv8-dev libcairo2-dev libnetcdf-dev gdebi libxml2-dev libssl-dev libcurl4-openssl-dev libopenblas-dev
+sudo apt install r-cran-gstat r-cran-maps r-cran-mapdata r-cran-ncdf4 r-cran-sp r-cran-sf r-cran-sp r-cran-raster r-cran-spatstat r-cran-geor r-cran-ggmap r-cran-leaflet r-cran-rosm r-cran-rgeos r-cran-stringi r-cran-magrittr</code></pre>
+<p>R-Studio is a development environment for R and also other languages, visit the <a href="https://www.rstudio.com/products/rstudio/download/">R-Studio website</a> to install the latest version.</p>
+<pre class="bash"><code>#install RStudio
+cd ~/Downloads
+wget https://download1.rstudio.org/rstudio-xenial-1.1.463-amd64.deb
+sudo gdebi rstudio-xenial-1.1.463-amd64.deb</code></pre>
 </div>
 </div>
 
