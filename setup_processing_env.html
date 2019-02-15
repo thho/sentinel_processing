@@ -11,7 +11,7 @@
 
 <meta name="author" content="Thorsten Höser, thorsten.hoser@gmail.com, Researchgate, GitHub" />
 
-<meta name="date" content="2018-11-25" />
+<meta name="date" content="2019-02-15" />
 
 <title>Processing Sentinel Data</title>
 
@@ -229,7 +229,7 @@ div.tocify {
 <h1 class="title toc-ignore">Processing Sentinel Data</h1>
 <h3 class="subtitle"><em>General Setup for processing</em></h3>
 <h4 class="author"><em>Thorsten Höser, <a href="mailto:thorsten.hoser@gmail.com">thorsten.hoser@gmail.com</a>, <a href="https://www.researchgate.net/profile/Thorsten_Hoeser">Researchgate</a>, <a href="https://github.com/thho">GitHub</a></em></h4>
-<h4 class="date"><em>2018-11-25</em></h4>
+<h4 class="date"><em>2019-02-15</em></h4>
 
 </div>
 
@@ -328,6 +328,28 @@ pip install sentinelsat</code></pre>
 <h2>pygeoj</h2>
 <p>pygeoj is a python module to read, write and work with the GeoJSON format. Have a <a href="http://pythonhosted.org/PyGeoj/">look here</a>.</p>
 <pre class="bash"><code>pip install pygeoj</code></pre>
+</div>
+<div id="r" class="section level2">
+<h2>R</h2>
+<p><a href="https://www.r-project.org/">R</a> is used for some data converting and postprocessing as well as visualizing results.</p>
+<pre class="bash"><code>#install R
+sudo add-apt-repository 'deb https://cloud.r-project.org/bin/linux/ubuntu bionic-cran35/'
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E084DAB9
+sudo apt update
+sudo apt install r-base r-base-core r-recommended
+sudo add-apt-repository ppa:marutter/c2d4u3.5
+sudo apt-get update
+sudo apt install r-cran-rgl r-cran-rjags r-cran-snow r-cran-ggplot2 r-cran-igraph r-cran-lme4 r-cran-rjava r-cran-devtools r-cran-roxygen2 r-cran-rjava r-cran-xlsx
+sudo add-apt-repository 'deb http://ppa.launchpad.net/ubuntugis/ubuntugis-unstable/ubuntu bionic main '
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 314DF160
+sudo apt update
+sudo apt install libgdal-dev libproj-dev libgeos-dev libudunits2-dev libv8-dev libcairo2-dev libnetcdf-dev gdebi libxml2-dev libssl-dev libcurl4-openssl-dev libopenblas-dev
+sudo apt install r-cran-gstat r-cran-maps r-cran-mapdata r-cran-ncdf4 r-cran-sp r-cran-sp r-cran-raster r-cran-spatstat r-cran-geor r-cran-ggmap r-cran-leaflet r-carn-rgeos r-cran-stringi r-cran-magrittr</code></pre>
+<p>R-Studio is a development environment for R and also other languages, visit the <a href="https://www.rstudio.com/products/rstudio/download/">R-Studio website</a> to install the latest version.</p>
+<pre class="bash"><code>#install RStudio
+cd ~/Downloads
+wget https://download1.rstudio.org/rstudio-xenial-1.1.463-amd64.deb
+sudo gdebi rstudio-xenial-1.1.463-amd64.deb</code></pre>
 </div>
 </div>
 
