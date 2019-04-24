@@ -11,7 +11,7 @@
 
 <meta name="author" content="Thorsten Höser, thorsten.hoser@gmail.com, Researchgate, GitHub" />
 
-<meta name="date" content="2019-04-01" />
+<meta name="date" content="2019-04-24" />
 
 <title>Processing Sentinel Data</title>
 
@@ -74,9 +74,7 @@ h6 {
 </style>
 
 
-</head>
 
-<body>
 
 <style type="text/css">
 .main-container {
@@ -101,21 +99,82 @@ img {
 button.code-folding-btn:focus {
   outline: none;
 }
+summary {
+  display: list-item;
+}
 </style>
 
 
 
-<div class="container-fluid main-container">
-
 <!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "";
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
 <script>
 $(document).ready(function () {
   window.buildTabsets("TOC");
 });
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open')
+  });
+});
 </script>
 
 <!-- code folding -->
-
 
 
 
@@ -210,6 +269,16 @@ div.tocify {
 
 </style>
 
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
 <!-- setup 3col/9col grid for toc_float and main content  -->
 <div class="row-fluid">
 <div class="col-xs-12 col-sm-4 col-md-3">
@@ -227,9 +296,9 @@ div.tocify {
 
 
 <h1 class="title toc-ignore">Processing Sentinel Data</h1>
-<h3 class="subtitle"><em>General Setup for processing</em></h3>
-<h4 class="author"><em>Thorsten Höser, <a href="mailto:thorsten.hoser@gmail.com">thorsten.hoser@gmail.com</a>, <a href="https://www.researchgate.net/profile/Thorsten_Hoeser">Researchgate</a>, <a href="https://github.com/thho">GitHub</a></em></h4>
-<h4 class="date"><em>2019-04-01</em></h4>
+<h3 class="subtitle">General Setup for processing</h3>
+<h4 class="author">Thorsten Höser, <a href="mailto:thorsten.hoser@gmail.com">thorsten.hoser@gmail.com</a>, <a href="https://www.researchgate.net/profile/Thorsten_Hoeser">Researchgate</a>, <a href="https://github.com/thho">GitHub</a></h4>
+<h4 class="date">2019-04-24</h4>
 
 </div>
 
@@ -240,14 +309,13 @@ div.tocify {
 <div id="about-this-document" class="section level1">
 <h1>About this document</h1>
 <p>The document focusses on setting up an environment in which data acquisition, processing and visualisation of Sentinel data with free or OS software is possible. Thereby, it is not important if the system is a local machine or a cloud based instance.<br />
-The document starts with a very plain and basic installation of Python and SNAP, continues with configuration and installation of other software for further processing and finally will has a section about using SNAP source code from GitHub, configuring or adding operators and checking out later versions of SNAP if necessary, this last point is planned to be published in January 2019.<br />
-Important to mention is that all instructions were tested on an Ubuntu 18.4 Bionic Beaver OS. A UNIX based OS of some kind is therefore essential and highly recommended to use this guide.</p>
+The document starts with a very plain and basic installation of Python and SNAP, continues with configuration and installation of other software for further processing. Important to mention is that all instructions were tested on an Ubuntu 18.04.02 LTS Bionic Beaver OS. A UNIX based OS of some kind is therefore essential and highly recommended to use this guide.</p>
 </div>
 <div id="installations" class="section level1">
 <h1>Installations</h1>
 <div id="python-2.7" class="section level2">
 <h2>Python 2.7</h2>
-<p>To install Python I use Anaconda2. I would recommend doing this for several reasons, for instance, you can easily set up a new Python environment with conda for other projects, without messing up Python and module versions etc. It is even rather easy to install anaconda2 to have a Python 3.x available. Using Anaconda to hanlde all your needs with Python versions of all kinds works surprisingly smooth.</p>
+<p>To install Python I use Anaconda2. I would recommend doing this for several reasons, for instance, you can easily set up a new Python environment with conda for other projects, without messing up Python and module versions etc. Using Anaconda to hanlde all your needs with Python versions of all kinds works surprisingly smooth.</p>
 <p><a href="https://docs.anaconda.com/anaconda/install/linux">Here</a> are the steps I followed for installation, a short summary:</p>
 <p>Go to <a href="https://www.anaconda.com/download/#linux" class="uri">https://www.anaconda.com/download/#linux</a> and download Anaconda2.</p>
 <pre class="bash"><code>#in terminal
@@ -265,9 +333,9 @@ bash ~/Downloads/Anaconda2-5.3.1-Linux-x86_64.sh
 #if not do
 sudo apt install spyder</code></pre>
 </div>
-<div id="snap-toolbox-6.0" class="section level2">
-<h2>SNAP Toolbox 6.0</h2>
-<p>Go to <a href="http://step.esa.int/main/download/" class="uri">http://step.esa.int/main/download/</a> and download <strong>Sentinel Toolboxes Unix 64-bit</strong>.</p>
+<div id="snap-toolbox" class="section level2">
+<h2>SNAP Toolbox</h2>
+<p>Go to <a href="http://step.esa.int/main/download/" class="uri">http://step.esa.int/main/download/</a> and download <strong>Sentinel Toolboxes Unix 64-bit</strong>. Here the installation of version 6 is shown, if a later version exists, install the latest version!</p>
 <pre class="bash"><code>#in terminal
 #navigate to the Download directory
 cd Downloads
@@ -278,7 +346,7 @@ chmod +x esa-snap_sentinel_unix_6_0.sh
 <p>Close SNAP.</p>
 <div id="configure-snappy-snap---python-interface" class="section level3">
 <h3>Configure snappy SNAP - Python interface</h3>
-<p>In 5.x I faced some trouble doing this, since the 6.0 release it works fine again. Before starting the configuration, install jpy a Java - Python interface, hence SNAP is written in Java.</p>
+<p>In 5.x I faced some trouble doing this, since the 6.0 release it works fine again. Before starting the configuration, install jpy a Java - Python interface, hence SNAP is written in Java. Problems were reported when using Ubuntu 16.04, try to update to 18.04.02 LTS or later.</p>
 <pre class="bash"><code>#in terminal
 sudo apt install python-jpy</code></pre>
 <p>I configured snappy by following <a href="https://senbox.atlassian.net/wiki/spaces/SNAP/pages/50855941/Configure+Python+to+use+the+SNAP-Python+snappy+interface">these guide</a>.</p>
