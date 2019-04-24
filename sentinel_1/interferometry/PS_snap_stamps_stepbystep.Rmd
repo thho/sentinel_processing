@@ -1,5 +1,5 @@
 ---
-title: "SNAP - StaMPS workflow for PS processing - 2.0"
+title: "SNAP - StaMPS workflow for PS processing"
 subtitle: "Creating displacement maps using Sentinel-1 data"
 author: "Thorsten Höser, [Researchgate](https://www.researchgate.net/profile/Thorsten_Hoeser), [GitHub](https://github.com/thho)"
 date: "`r paste(Sys.Date())`"
@@ -12,8 +12,8 @@ output:
       smooth_scroll: true
     toc_depth: 3
     number_sections: true
-bibliography: MAthesis.bib
-csl: isprs-journal-of-photogrammetry-and-remote-sensing.csl
+bibliography: /home/thho/github/sentinels_processing/dev_files/MAthesis.bib
+csl: /home/thho/github/sentinels_processing/dev_files/isprs-journal-of-photogrammetry-and-remote-sensing.csl
 urlcolor: blue
 fontsize: 11pt
 ---
@@ -39,7 +39,7 @@ grid.raster(img)
 This document is part of the appendix of the master thesis: Analysing the Capabilities and Limitations of InSAR using Sentinel-1 Data for Landslide Detection and Monitoring.   
 DOI: 10.13140/RG.2.2.35085.59362
 
-At the moment, the document describes the processing in StaMPS for version 3.x, the latest version is 4.x, keep this in mind while reading. Preprocessing in SNAP has not changed until now.
+The code within this script can be used for preprocessing S1 SLC data for StaMPS. Meanwihle, there is the snap2stamps package which is better maintained and more up to date, therefore I recommend using it. Anyway, for a btter understanding what is happening under the hood during preprocessing, this documentation and the master thesis referred to earlier is still a good start!
 
 The content of this document has no claim to be correct and comes with absolutely no warranty.  
 
@@ -60,8 +60,6 @@ The guidance given in this summary are technically. It is absolutely necessary t
 
 **StaMPS/MTI literature:**
 @hooper2004, @hooper2006, @hooper2007, @hooper2008, @hooper2010, @hooper2012 and @hooper2013
-
-To give a full introduction even to users which have not worked with the SNAP Toolbox etc., the document starts with installing a Unix based OS, software and their configurations you need during the workflow. If you are already familiar with all the software needed, skip these sections and move on to the processing part you are interested in.  
 
 #Installation
 
@@ -101,20 +99,21 @@ sudo apt-get install csh
 
 Got to https://homepages.see.leeds.ac.uk/~earahoo/stamps/, here you can find the handbook and the download link. The next steps can be found in the handbook in chapter 2 *Installation*:
 
-Download the .tar.gz from the StaMPS homepage
+Download the .tar.gz from the StaMPS homepage or github, see the latest link on the hompage
 
 ```{bash eval=FALSE}
+#adapt the file name of the stamps version!
 #in terminal
 #move unzip and enter the stamps installation folder
-mv /home/user/Downloads/StaMPS_v3.3b1.tar.gz /home/user/
-tar -xvf StaMPS_v3.3b1.tar.gz
-cd StaMPS_v3.3b1/src
+mv /home/user/Downloads/StaMPS_v4xtar.gz /home/user/
+tar -xvf StaMPS_v4x 
+cd StaMPS_v4.x.tar.gz/src
 #install stamps
 make
 make install
 cd /home/user
 #remove initial installation data
-rm StaMPS_v3.3b1.tar.gz
+rm StaMPS_v4.x.tar.gz
 ```
 
 ###Configuration
@@ -128,7 +127,7 @@ whereis matlab snaphu triangle csh
 The task of StaMPS_CONFIG.bash is to extend your PATH variable, so that your machine finds all these applications and some more directories which are used in StaMPS. Open StaMPS_CONFIG.bash with Kate or some other text editor. You will notice that the configuration is prepared to point to much more applications and directories. Hence the preprocessing will be performed in SNAP, DORIS for instance, will never be used in our setting. We are able to comment a lot of the script. If you followed the installation guide in this summary, you can use the script below, adapting the user *thho* in each path to your user name. In case your installation of snaphu or one of the other applications is not located in /usr/local/bin/ or /usr/bin/ you can set the path to the folder containing the application bin, using one of the prepared rows which are commented in my version. Do not miss the last line, where the unneeded variables are excluded from the final export to PATH. Notice, that the path information /usr/local/bin/ and /usr/bin/ are already part of PATH, hence we do not have to point to special folders containing snaphu or triangle, because they are installed in the default paths mentioned.  
 
 ```{bash eval=FALSE}
-export STAMPS="/home/thho/StaMPS_v3.3b1"
+export STAMPS="/home/thho/StaMPS_v4.x" #adapt the stamps version
 #export SAR="/home/thho/ROI_PAC_3_0"
 #export GETORB_BIN="/home/thho/getorb/bin"
 #export SAR_ODR_DIR="/home/thho/SAR_FILES/ODR"
@@ -195,7 +194,8 @@ export PATH=${PATH}:$STAMPS/bin:$MATLABPATH
 Open the terminal and type:
 
 ```{bash eval=FALSE}
-source /home/<user>/StaMPS_v3.3b1/StaMPS_CONFIG.bash
+#adapt the stamps version
+source /home/<user>/StaMPS_vx/StaMPS_CONFIG.bash
 ```
 
 To check if something happened, type:
@@ -204,20 +204,23 @@ To check if something happened, type:
 printenv PATH
 ```
 
-```{bash echo=FALSE}
+```{bash echo=FALSE, eval=FALSE}
 source /home/thho/StaMPS_v3.3b1/StaMPS_CONFIG.bash
 printenv PATH
 ```
 
-The PATH variable now contains the information where to look for C scripts (../StaMPS_v3.3b1/bin/) and where Matlab can search for the .m scripts used by StaMPS, which are stored in /StaMPS_v3.3b1/matlab/ directory.
+The PATH variable now contains the information where to look for C scripts (../StaMPS_v4.x/bin/) and where Matlab can search for the .m scripts used by StaMPS, which are stored in /StaMPS_v4.x/matlab/ directory.
 
 **Notice that you have to call**
 
 ```{bash eval=FALSE}
-source /home/<user>/StaMPS_v3.3b1/StaMPS_CONFIG.bash
+#adapt stamps version
+source /home/<user>/StaMPS_v4.x/StaMPS_CONFIG.bash
 ```
 
 **every time you want to work with StaMPS, see [StaMPS PS analysis]**
+
+<!--
 
 ###Special configurations for SNAP
 
@@ -229,7 +232,7 @@ Even it is not necessary in all cases, some bugs occurred using the StaMPS scrip
 Both scripts are within the .zip foler for PS and for SBAS processing. They are called: mt_prep_gamma_snap and ps_load_initial_gamma.m. 
 
 
-```{bash eval=FALSE}
+```{bash eval=FALSE, echo=FALSE}
 #save the old files if you want to keep them
 #in terminal
 mkdir /home/user/StaMPS_v3.3b1/bin/exclude/
@@ -245,18 +248,18 @@ mv .../PS_workflow/mt_prep_gamma_snap /home/user/StaMPS_v3.3b1/bin/
 
 Because this script was not installed during StaMPS setup, we have to set an execution flag manually, to call it from terminal.
 
-```{bash eval=FALSE}
+```{bash eval=FALSE, echo=FALSE}
 #in terminal
 chmod u+x /home/user/StaMPS_v3.3b1/bin/mt_prep_gamma_snap
 ```
 
-```{bash eval=FALSE}
+```{bash eval=FALSE, echo=FALSE}
 mv .../PS_workflow/ps_load_initial_gamma.m /home/user/StaMPS_v3.3b1/matlab/
 ```
-
+-->
 #Download Sentinel-1 Data
 
-Downloading a bulk of Sentinel images, either S1 or S2, is not very smooth if you use the GUI from the Open Access Hub. But if you have an account, you can use the sentinelsat module from your python interpreter. As region of interest, I recommend creating a Polygon in Google Earth and export it as kml. I than use R to convert to .geojson using this script:
+Downloading a bulk of Sentinel images, either S1 or S2, is not very smooth if you use the GUI from the Open Access Hub. But if you have an account, you can use the sentinelsat module from your python interpreter. As region of interest, I recommend creating a polygon in Google Earth and export it as kml. I then use R to convert to .geojson using this script:
 
 ```{r eval=FALSE}
 #in RStudio
@@ -432,16 +435,20 @@ If that is the case, the libgfortran3 package must be installed on your machine.
 apt-get install libgfortran3
 ``` 
 
-The result is a stack, the first three bands are the bands of the master product i, q and Intensity. Edges of the Intensity band look like this:
+The result is a stack, the first three bands are the bands of the master product i, q and Intensity. 
 
-```{r fig.width=7, fig.height=5, echo = F, fig.align='center', eval = T, fig.cap='Edge of a burst of a Sentinel-1 IW SLC product.'}
+
+<!--Edges of the Intensity band look like this:
+
+```{r fig.width=7, fig.height=5, echo = F, fig.align='center', eval = T, fig.cap='Edge of a burst of a Sentinel-1 IW SLC product.', eval = FALSE}
 img <- readPNG("./wf_docu_pic/burstedge.png")
 grid.raster(img)
 ```
+-->
 
 ###TOPSAR-Deburst
 
-To get rid of the effects on the edges shown in the last section, the TOPSAR-Deburst operator is used. Hence the stack was created using the GUI I recommend to open spyder again and continue processing in python, because it is again a single step, you can even use the GUI, that is on you.
+To get rid of the effects on the edges, the TOPSAR-Deburst operator is used. Hence the stack was created using the GUI I recommend to open spyder again and continue processing in python, because it is again a single step, you can even use the GUI, that is on you.
 
 ```{bash eval=FALSE}
 #in terminal
@@ -454,8 +461,8 @@ Append the parameters inpath_stack (the path to the output of the Back-Geocoding
 ######################
 ##user configuration##
 ######################
-inpath_stack = '/home/thho/PSI/backgeoc/S1A_IW_SLC__1SDV_20170514_Stack.dim'
-outpath = '/home/thho/PSI/dbrst/'
+inpath_stack = '/home/user/PSI/backgeoc/S1A_IW_SLC__1SDV_20170101_Stack.dim'
+outpath = '/home/user/PSI/dbrst/'
 out_form = '.dim'
 
 ##load modules
@@ -501,9 +508,9 @@ spyder
 #User Configuration#
 ####################
 out_form = ".dim"
-inpath = '/home/thho/psstack/20170310_Stack_deb.dim'
-outpath_substack = '/home/thho/psstack/20170310_PS_subset' + out_form
-subpoly_path = '/home/thho/studysiteinfo/subset.geojson'
+inpath = '/home/user/psstack/20170101_Stack_deb.dim'
+outpath_substack = '/home/user/psstack/20170101_PS_subset' + out_form
+subpoly_path = '/home/user/studysiteinfo/subset.geojson'
 
 ###################################
 #import modules and SNAP operators#
@@ -584,11 +591,12 @@ As mentioned in [Configuration], the StaMPS_CONFIG.bash must be called in each t
 The steps described below are just a brief workflow of StaMPS, I really recommend to read the [StaMPS handbook](https://homepages.see.leeds.ac.uk/~earahoo/stamps/StaMPS_Manual_v3.3b1.pdf) where the steps and parameters are described in detail!
 
 ```{bash eval=FALSE}
+#adapt stamps version
 #open terminal (further StaMPS-terminal) and close it when you finished all steps in StaMPS
-source /home/thho/StaMPS_v3.3b1/StaMPS_CONFIG.bash
+source /home/user/StaMPS_v4.x/StaMPS_CONFIG.bash
 
 #<yyyymmdd> must be the date of the master
-mt_prep_gamma_snap <yyyymmdd> /home/thho/PSI/INSAR_master_date/ 0.4
+mt_prep_snap <yyyymmdd> /home/user/PSI/INSAR_master_date/ 0.4
 ```
 
 During processing, check if there are no warnings for Zero mean values! If there are warnings for a specific date, this image is corrupt and the whole preprocessing has to be done again, therefore it is crucial to check the results after the step Split-Orbit File apply, because there the errors mostly occur.
