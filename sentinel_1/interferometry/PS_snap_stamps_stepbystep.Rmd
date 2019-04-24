@@ -1,0 +1,641 @@
+---
+title: "SNAP - StaMPS workflow for PS processing - 2.0"
+subtitle: "Creating displacement maps using Sentinel-1 data"
+author: "Thorsten Höser, [Researchgate](https://www.researchgate.net/profile/Thorsten_Hoeser), [GitHub](https://github.com/thho)"
+date: "`r paste(Sys.Date())`"
+output:
+  html_document:
+    fig_caption: true
+    fig_crop: true
+    toc: true
+    toc_float: 
+      smooth_scroll: true
+    toc_depth: 3
+    number_sections: true
+bibliography: MAthesis.bib
+csl: isprs-journal-of-photogrammetry-and-remote-sensing.csl
+urlcolor: blue
+fontsize: 11pt
+---
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(png)
+library(grid)
+library(jpeg)
+library(RCurl)
+library(dplyr)
+library(reticulate)
+knitr::knit_engines$set(python = reticulate::eng_python)
+#library(imager)
+```
+
+```{r fig.width=7, fig.height=5, echo = F, fig.align='center', eval = F}
+img <- readJPEG(getURLContent("http://www.esa.int/var/esa/storage/images/esa_multimedia/images/2017/11/s1_hl/17244112-1-eng-GB/S1_HL_highlight_std.jpg"))
+grid.raster(img)
+#http://www.esa.int/var/esa/storage/images/esa_multimedia/images/2017/11/s1_hl/17244112-1-eng-GB/S1_HL_highlight_std.jpg
+```
+
+#Comment {-}
+This document is part of the appendix of the master thesis: Analysing the Capabilities and Limitations of InSAR using Sentinel-1 Data for Landslide Detection and Monitoring.   
+DOI: 10.13140/RG.2.2.35085.59362
+
+At the moment, the document describes the processing in StaMPS for version 3.x, the latest version is 4.x, keep this in mind while reading. Preprocessing in SNAP has not changed until now.
+
+The content of this document has no claim to be correct and comes with absolutely no warranty.  
+
+Parts of this document are based on discussions and presented workflows from [MAINSAR](https://groups.google.com/forum/#!topic/mainsar/38KZ2-6nbrI) and the [step forum](http://forum.step.esa.int/t/workflow-between-snap-and-stamps/3211/9). Thanks to all members and developers contributing ideas and solving problems.
+
+#About this document
+
+The guidance given in this summary are technically. It is absolutely necessary to know the basics of the theoretical background on radar remote sensing and InSAR. Here is some recommended literature.
+
+**Introductions to InSAR and DInSAR:**  
+@franceschetti1999, @rosen2000, @lauknes2004, @ferretti2007 and @simons2007
+
+**Persistent Scatterer:**  
+@ferretti2000, @ferretti2001
+
+**Small Baseline Subset:**  
+@berardino2002
+
+**StaMPS/MTI literature:**
+@hooper2004, @hooper2006, @hooper2007, @hooper2008, @hooper2010, @hooper2012 and @hooper2013
+
+To give a full introduction even to users which have not worked with the SNAP Toolbox etc., the document starts with installing a Unix based OS, software and their configurations you need during the workflow. If you are already familiar with all the software needed, skip these sections and move on to the processing part you are interested in.  
+
+#Installation
+
+In addition to the setup, described in [setup_processing_env.html](github.com/thho/sentinel_processing), the following software have to be installed:
+
+##triangle
+
+trinagle is a software generating exact Delaunay triangulations, constrained Delaunay triangulations, conforming Delaunay triangulations, Voronoi diagrams, and high-quality triangular meshes. It is used by StaMPS.
+Have a look at [this page](http://www.cs.cmu.edu/~quake/triangle.html) for a full description.
+
+```{bash eval=FALSE}
+sudo apt-get update
+sudo apt-get install triangle-bin
+```
+
+##Matlab
+This is the only not free available software in the whole workflow. Due to different licensing options and the good documentation how to install Matlab, this is skipped in this summary.
+
+##snaphu
+snaphu is a software used for phase unwrapping by StaMPS.
+Have a look at [this page](https://web.stanford.edu/group/radar/softwareandlinks/sw/snaphu/) for a full description.
+
+```{bash eval=FALSE}
+sudo apt-get update
+sudo apt-get install snaphu
+```
+
+##csh
+
+csh is a interpreter for C-shell which is needed to run scripts within the StaMPS installation.
+
+```{bash eval=FALSE}
+sudo apt-get install csh
+```
+
+##StaMPS
+
+Got to https://homepages.see.leeds.ac.uk/~earahoo/stamps/, here you can find the handbook and the download link. The next steps can be found in the handbook in chapter 2 *Installation*:
+
+Download the .tar.gz from the StaMPS homepage
+
+```{bash eval=FALSE}
+#in terminal
+#move unzip and enter the stamps installation folder
+mv /home/user/Downloads/StaMPS_v3.3b1.tar.gz /home/user/
+tar -xvf StaMPS_v3.3b1.tar.gz
+cd StaMPS_v3.3b1/src
+#install stamps
+make
+make install
+cd /home/user
+#remove initial installation data
+rm StaMPS_v3.3b1.tar.gz
+```
+
+###Configuration
+
+After the installation is complete, the StaMPS_CONFIG.bash file must be prepared to configure StaMPS on your machine. Be sure Matlab, snaphu, triangle and csh are installed. I take it, that your installations are at this locations:
+
+```{bash}
+whereis matlab snaphu triangle csh
+```
+
+The task of StaMPS_CONFIG.bash is to extend your PATH variable, so that your machine finds all these applications and some more directories which are used in StaMPS. Open StaMPS_CONFIG.bash with Kate or some other text editor. You will notice that the configuration is prepared to point to much more applications and directories. Hence the preprocessing will be performed in SNAP, DORIS for instance, will never be used in our setting. We are able to comment a lot of the script. If you followed the installation guide in this summary, you can use the script below, adapting the user *thho* in each path to your user name. In case your installation of snaphu or one of the other applications is not located in /usr/local/bin/ or /usr/bin/ you can set the path to the folder containing the application bin, using one of the prepared rows which are commented in my version. Do not miss the last line, where the unneeded variables are excluded from the final export to PATH. Notice, that the path information /usr/local/bin/ and /usr/bin/ are already part of PATH, hence we do not have to point to special folders containing snaphu or triangle, because they are installed in the default paths mentioned.  
+
+```{bash eval=FALSE}
+export STAMPS="/home/thho/StaMPS_v3.3b1"
+#export SAR="/home/thho/ROI_PAC_3_0"
+#export GETORB_BIN="/home/thho/getorb/bin"
+#export SAR_ODR_DIR="/home/thho/SAR_FILES/ODR"
+#export SAR_PRC_DIR="/home/thho/SAR_FILES/PRC"
+#export VOR_DIR="/home/thho/SAR_FILES/VOR"
+#export INS_DIR="/home/thho/SAR_FILES/INS"
+#export DORIS_BIN="/home/thho/doris_v4.02/bin"
+#export TRIANGLE_BIN="/home/thho/triangle/bin"
+#export SNAPHU_BIN="/home/thho/snaphu-v1.4.2/bin"
+
+#export ROI_PAC="$SAR/ROI_PAC"
+#####################################
+# ROI_PAC VERSION 3 
+#####################################
+#export INT_BIN="$ROI_PAC/INT_BIN"
+#export INT_SCR="$ROI_PAC/INT_SCR"
+#####################################
+
+#####################################
+# ROI_PAC VERSION 2.3 and before 
+#####################################
+#set MACH=`uname -s`
+#if ($MACH == "HP-UX") then
+#  export ARCHC=HP
+#else if ($MACH == "IRIX") then
+#  export ARCHC=SGI
+#else if ($MACH == "SunOS") then
+#  export ARCHC=SUN
+#else if ($MACH == "Linux") then
+#  export ARCHC=LIN
+#else if ($MACH == "Darwin") then
+#  export ARCHC=MAC
+#fi
+#export INT_LIB="$ROI_PAC/LIB/$ARCHC"
+#export INT_BIN="$ROI_PAC/BIN/$ARCHC"
+#export FFTW_LIB="$SAR/FFTW/$ARCHC""_fftw_lib"
+#####################################
+
+#####################################
+# shouldn't need to change below here
+#####################################
+
+#export MY_BIN="$INT_BIN"
+export MATLABPATH=$STAMPS/matlab:`echo $MATLABPATH`
+#export DORIS_SCR="$STAMPS/DORIS_SCR"
+
+# Needed for ROI_PAC (a bit different to standard)
+
+### use points not commas for decimals, and give dates in US english
+export LC_NUMERIC="en_US.UTF-8"
+export LC_TIME="en_US.UTF-8"
+
+
+#export MY_SAR="$SAR"
+#export OUR_SCR="$MY_SAR/OUR_SCR"
+#export MY_SCR="$STAMPS/ROI_PAC_SCR"
+
+export SAR_TAPE="/dev/rmt/0mn"
+
+#export PATH=${PATH}:$STAMPS/bin:$MY_SCR:$INT_BIN:$INT_SCR:$OUR_SCR:$DORIS_SCR:$GETORB_BIN:$DORIS_BIN:$TRIANGLE_BIN:$SNAPHU_BIN
+export PATH=${PATH}:$STAMPS/bin:$MATLABPATH
+```
+
+Open the terminal and type:
+
+```{bash eval=FALSE}
+source /home/<user>/StaMPS_v3.3b1/StaMPS_CONFIG.bash
+```
+
+To check if something happened, type:
+
+```{bash eval=FALSE}
+printenv PATH
+```
+
+```{bash echo=FALSE}
+source /home/thho/StaMPS_v3.3b1/StaMPS_CONFIG.bash
+printenv PATH
+```
+
+The PATH variable now contains the information where to look for C scripts (../StaMPS_v3.3b1/bin/) and where Matlab can search for the .m scripts used by StaMPS, which are stored in /StaMPS_v3.3b1/matlab/ directory.
+
+**Notice that you have to call**
+
+```{bash eval=FALSE}
+source /home/<user>/StaMPS_v3.3b1/StaMPS_CONFIG.bash
+```
+
+**every time you want to work with StaMPS, see [StaMPS PS analysis]**
+
+###Special configurations for SNAP
+
+Even it is not necessary in all cases, some bugs occurred using the StaMPS scripts to process interferometry stacks preprocessed by SNAP. In order to overcome this bugs, [FeiLiu](http://forum.step.esa.int/users/feiliu/activity) and later [thho](https://forum.step.esa.int/u/thho/) changed two scripts, which we can now include in the StaMPS installation.
+
+**Notice**  
+*I am not totally aware, if the changed scripts are necessary after the SNAP 6.0 release, because they handle some problems which where solved after the newest release. Because I do not have a dataset produces with older SNAP versions to compare to, someone who has such "old" products could try a workflow without the changed scripts and tell if there is a difference at all.*
+
+Both scripts are within the .zip foler for PS and for SBAS processing. They are called: mt_prep_gamma_snap and ps_load_initial_gamma.m. 
+
+
+```{bash eval=FALSE}
+#save the old files if you want to keep them
+#in terminal
+mkdir /home/user/StaMPS_v3.3b1/bin/exclude/
+mv /home/user/StaMPS_v3.3b1/bin/mt_prep_gamma_snap /home/user/StaMPS_v3.3b1/bin/exclude/
+mkdir /home/user/StaMPS_v3.3b1/matlab/exclude/
+mv /home/user/StaMPS_v3.3b1/matlab/ps_load_initial_gamma.m /home/user/StaMPS_v3.3b1/matlab/exclude/
+
+#insert changed scripts
+#cd to dir containing PS_worfkflow.zip
+unzip PS_workflow.zip
+mv .../PS_workflow/mt_prep_gamma_snap /home/user/StaMPS_v3.3b1/bin/
+```
+
+Because this script was not installed during StaMPS setup, we have to set an execution flag manually, to call it from terminal.
+
+```{bash eval=FALSE}
+#in terminal
+chmod u+x /home/user/StaMPS_v3.3b1/bin/mt_prep_gamma_snap
+```
+
+```{bash eval=FALSE}
+mv .../PS_workflow/ps_load_initial_gamma.m /home/user/StaMPS_v3.3b1/matlab/
+```
+
+#Download Sentinel-1 Data
+
+Downloading a bulk of Sentinel images, either S1 or S2, is not very smooth if you use the GUI from the Open Access Hub. But if you have an account, you can use the sentinelsat module from your python interpreter. As region of interest, I recommend creating a Polygon in Google Earth and export it as kml. I than use R to convert to .geojson using this script:
+
+```{r eval=FALSE}
+#in RStudio
+###################################
+##convert google's kml to geojson##
+###################################
+#install.packages("rgdal") #for first use
+library(rgdal)
+#as .kml
+in.path <- "/home/user/roi.kml"
+#as .geojson
+out.path <- "/home/user/roi.geojson"
+l.name <- "roi"
+#read data into R
+dat <- readOGR(in.path)
+#write and convert file
+writeOGR(dat, out.path, driver = "GeoJSON", layer = l.name, overwrite_layer = T)
+```
+
+```{bash eval=FALSE}
+#in terminal
+spyder
+```
+
+```{python eval=FALSE}
+#in spyder
+#Downloading S1 data from Copernicus Open Data Hub
+#import modules
+from sentinelsat import SentinelAPI, read_geojson, geojson_to_wkt
+#configure API and query
+api = SentinelAPI('user', 'password')
+footprint = geojson_to_wkt(read_geojson('/home/user/roi.geojson'))
+products = api.query(footprint,
+                     platformname='Sentinel-1',
+                     producttype='SLC',
+                     orbitdirection='ASCENDING',#DESCENDING
+                     beginposition=
+                     '[yyyy-mm-ddT00:00:00.000Z TO yyyy-mm-ddT00:00:00.000Z]',
+                     sensoroperationalmode='IW',
+                     polarisationmode='VV',#HH
+                     relativeorbitnumber='1')#1-175
+#Download queried data to specific location                     
+api.download_all(products, directory_path='/home/user/hdd/')
+```
+
+To see all options you can use to communicate with the server, have a look at the [sentinelsat documentation](http://sentinelsat.readthedocs.io/en/stable/api.html) and the [original API documentation](https://scihub.copernicus.eu/userguide/3FullTextSearch) of the data hub.
+
+Before using all data, I recommend to open the downloaded data set in SNAP and check if the images are all right by looking on the amplitude.
+
+#SNAP-StaMPS for PS 
+
+The whole workflow is a summary and combination of the [StaMPS manual](https://homepages.see.leeds.ac.uk/~earahoo/stamps/) and discussions found in mainly two threads from the [google group MAINSAR](https://groups.google.com/forum/#!topic/mainsar/38KZ2-6nbrI) and the [step forum](http://forum.step.esa.int/t/how-to-prepare-sentinel-1-images-stack-for-psi-sbas-in-snap-5/4981/398). The aim of the summary presented here, is to disentangle some steps and workarounds, which were developed over time but in some cases are not longer necessary due to developments of the SNAP toolbox 6.0.
+
+##SNAP toolbox preprocessing
+
+The images used for PS analysis have to be IW SLC products with VV or HH polarisation. About 10 images are recommended as minimum when using StaMPS/MTI for PS or SBAS, but normally you will have longer time series and much more images. Anyway, to built up a first test setting, ~8 images are sufficient to check, if your workflow is stable. To reduce computing time in this test setting, choose a ROI which is within one burst if it is possible.
+
+###Read Product, TOPSAR-Split and Apply Orbit File
+The first step is to read the images as .zip files as you get them from the Copernicus Data Hub. Each .zip file is about 4.5GB in size. To possibly reduce the amount of data to be processed and to just process in one subswath, the TOPSAR-Split operator is used. To get this done you have to know in which subswath (IW 1-3, 3 subswaths make one S1-SLC-scene) your ROI is located. Load one image in SNAP using the GUI and visually check, which IW you have to choose using the *World View* tool. Later the .geojson, which defines your ROI, is passed to the operator which will then select the right burst (9 bursts make one subswath) from the selected subswath. That approach decreases data to be processed significantly! For further information about image acquisition modes see @dezan2006.  
+
+```{r fig.width=7, fig.height=5, echo = F, fig.align='center', eval = T, fig.cap='Sentinel-1 IW SLC product made of 3 subswaths, each made of 9 bursts. @esaonline'}
+img <- readJPEG(getURLContent("https://sentinel.esa.int/image/image_gallery?uuid=22f8e433-e39c-4a47-a18b-a1e3d13619d8&groupId=247904&t=1355224426382"))
+grid.raster(img)
+```
+
+After the TOPSAR-Splitting the exact orbit file is applied increase the coregistration accuracy. and later phase contribution calculation which will be subtracted. Orbit files are automatically downloaded if available, which is about three weeks after sensing date.
+
+```{bash eval=FALSE}
+#in terminal
+spyder
+```
+
+In the python code adapt inpath_dir (directory where your downloaded images as .zip files are stored), outpath (directory where the splitted image with precise orbit information will be stored), roi_dat (.geojson of the ROI) and IWnum (Number of the subswath the ROI is within). 
+
+```{python eval=FALSE}
+######################
+##user configuration##
+######################
+inpath_dir = '/path/to/directory/containing/IWSLC_products/'
+outpath = '/path/to/directory/'
+roi_dat = '/path/to/ROI.geojson'
+IWnum = 'IW2'#number of IW where  the ROI is within 'IW1', 'IW2' or 'IW3'
+polarisation = 'VV'#'HH'
+##load modules
+print('Loading modules...')
+import os
+import sys
+import snappy
+from snappy import ProductIO
+from snappy import GPF
+from snappy import HashMap
+from sentinelsat import read_geojson, geojson_to_wkt
+#Get snappy Operators
+GPF.getDefaultInstance().getOperatorSpiRegistry().loadOperatorSpis()
+print('Loading modules done!')
+
+##Read data
+print('Reading, TOPSAR-Split and Apply-Orbit-File...')
+#get filenames for each scene
+filenames = os.listdir(inpath_dir)
+inpath = ''
+out_form = '.dim'
+roi = geojson_to_wkt(read_geojson(roi_dat))
+#put parameters for TOPSAR-Split operator
+#https://github.com/senbox-org/s1tbx/blob/master/s1tbx-op-sentinel1/src/main/java/org/esa/s1tbx/sentinel1/gpf/TOPSARSplitOp.java
+parameters_split = HashMap()
+parameters_split.put('subswath', IWnum)
+parameters_split.put('selectedPolarisations', polarisation)
+parameters_split.put('wktAoi', roi)
+
+#put parameters for Apply-Orbit-File
+parameters_ao = HashMap()
+parameters_ao.put('orbitType', "Sentinel Precise (Auto Download)")
+parameters_ao.put('polyDegree', 3)
+parameters_ao.put('continueOnFail', False)
+
+#prepare object to store split_ao_results for Back-Geocoding operator
+prodset = []
+
+for i in range(len(filenames)):
+    inpath_r = inpath_dir+filenames[i]
+    outpath_r = outpath + filenames[i][0:25] + '_split_oa' + out_form
+    img = ProductIO.readProduct(inpath_r) 
+    ###################
+    ####TOPSAR-Split####
+    ####################
+    print('TOPSAR-Split for ' + filenames[i][0:25])
+    img_split = GPF.createProduct('TOPSAR-Split', parameters_split, img)
+    print('TOPSAR-Split for ' + filenames[i][0:25] + 'done!')
+    #deleting input data
+    del img
+    ########################
+    ####Apply-Orbit-File####
+    ########################
+    print('Apply-Orbit-File for ' + filenames[i][0:25])
+    #execute Apply-Orbit-File operator
+    img_split_ao = GPF.createProduct('Apply-Orbit-File', parameters_ao, img_split)
+    ProductIO.writeProduct(img_split_ao, outpath_r, 'BEAM-DIMAP')
+    del img_split
+    print('Apply-Orbit-File for ' + filenames[i][0:25] + 'done!')
+    prodset.append(img_split_ao)
+    del img_split_ao
+
+print('Reading, TOPSAR-Split and Apply-Orbit-File done!')
+```
+
+###Select master with optimal baseline
+
+The products produced in the last step, have to be stacked. In order to do so, one product has to be the master in this stack. Finding the optimal master is done in python as well.
+
+```{python eval=FALSE}
+#find Optimal Master Product
+InSARStackOverview = snappy.jpy.get_type('org.esa.s1tbx.insar.gpf.InSARStackOverview')
+opt_master = InSARStackOverview.findOptimalMasterProduct(prodset)
+#get PRODUCT string for optimal Master Product
+opt_master = opt_master.getMetadataRoot().getElement('Abstracted_Metadata').getAttribute('PRODUCT').getData()
+ProductData = snappy.jpy.get_type('org.esa.snap.core.datamodel.ProductData')
+master = ProductData.getElemString(opt_master)
+print master
+``` 
+
+Note the name printed in the console and close spyder.
+
+###Back-Geocoding to produce stack
+
+To coregistrate the SLC images, the Back-Geocoding operator can be executed using snappy, but python is rather slow doing this step, one other step is to use gpt, hence we have to produce one single stack, the simple GUI solution is used here. Go to your output directory and open all splitted and orbit file applied products (.dim) in SNAP. Go to Radar &#8680; Coregistration &#8680; S1 TOPS Coregistration &#8680; S-1 Back Geocoding. In *ProductSet-Reader* choose *Add Opened* to add all loaded products. Select the product which should become the master and use the &UpArrowBar; to make it the first product of the set. You can also sort the images by their date with these arrows, but be sure the first image remains the optimal master image, despite its date. Set the parameters in *Back-Geocoding* and an output path in *Write* and hit *Run*, the process takes some time.
+
+It is possible, that the Back-Geocoding operator returns an [error like](http://forum.step.esa.int/t/error-of-interferogram-in-snap/3424/8) org.jblas.NativeBlas.dgemm(CCIIID[DII[DIID[DII)V).
+If that is the case, the libgfortran3 package must be installed on your machine. This error occurs mainly on fresh installed Kubuntu OS which have not been used that much or any other packages are installed beside the packages mentioned in the Installation section, hence the package is missing. 
+
+```{bash eval=FALSE}
+#in terminal
+apt-get install libgfortran3
+``` 
+
+The result is a stack, the first three bands are the bands of the master product i, q and Intensity. Edges of the Intensity band look like this:
+
+```{r fig.width=7, fig.height=5, echo = F, fig.align='center', eval = T, fig.cap='Edge of a burst of a Sentinel-1 IW SLC product.'}
+img <- readPNG("./wf_docu_pic/burstedge.png")
+grid.raster(img)
+```
+
+###TOPSAR-Deburst
+
+To get rid of the effects on the edges shown in the last section, the TOPSAR-Deburst operator is used. Hence the stack was created using the GUI I recommend to open spyder again and continue processing in python, because it is again a single step, you can even use the GUI, that is on you.
+
+```{bash eval=FALSE}
+#in terminal
+spyder
+```
+
+Append the parameters inpath_stack (the path to the output of the Back-Geocoding operator) and outpath (path where the output will be stored)
+
+```{python eval=FALSE}
+######################
+##user configuration##
+######################
+inpath_stack = '/home/thho/PSI/backgeoc/S1A_IW_SLC__1SDV_20170514_Stack.dim'
+outpath = '/home/thho/PSI/dbrst/'
+out_form = '.dim'
+
+##load modules
+print('Loading modules...')
+import sys
+import snappy
+from snappy import ProductIO
+from snappy import GPF
+from snappy import HashMap
+#Get snappy Operators
+GPF.getDefaultInstance().getOperatorSpiRegistry().loadOperatorSpis()
+print('Loading modules done!')
+
+#Read data
+print('Reading stack...')
+prodset = ProductIO.readProduct(inpath_stack)
+print('Reading stack done!')
+
+######################
+####TOPSAR-Deburst####
+######################
+print('TOPSAR-Deburst...')
+#put parameters for TOPSAR-Deburst
+parameters = HashMap()
+parameters.put('selectedPolarisations', 'VV')
+#execute TOPSAR-Deburst
+prodset_bgc_dbrst = GPF.createProduct('TOPSAR-Deburst', parameters, prodset)
+ProductIO.writeProduct(prodset_bgc_dbrst, outpath + "stack_bgc_dbrst" + out_form, 'BEAM-DIMAP')
+print('TOPSAR-Deburst done!')
+```
+
+###Subset
+
+A spatial subset will be done, to further minimize the dataset to be processed. Therefore the ROI or another subset polygon you prefer is used again by snappy.
+
+```{bash eval=FALSE}
+#in terminal
+spyder
+``` 
+
+```{python eval=FALSE}
+####################
+#User Configuration#
+####################
+out_form = ".dim"
+inpath = '/home/thho/psstack/20170310_Stack_deb.dim'
+outpath_substack = '/home/thho/psstack/20170310_PS_subset' + out_form
+subpoly_path = '/home/thho/studysiteinfo/subset.geojson'
+
+###################################
+#import modules and SNAP operators#
+###################################
+print('Importing modules and SNAP operators...')
+import os
+import sys
+import snappy
+from snappy import ProductIO
+from snappy import GPF
+from snappy import HashMap
+from sentinelsat import read_geojson, geojson_to_wkt
+#Get snappy Operators
+GPF.getDefaultInstance().getOperatorSpiRegistry().loadOperatorSpis()
+WKTReader = snappy.jpy.get_type('com.vividsolutions.jts.io.WKTReader')
+print('Importing modules and SNAP operators done!')
+
+####################################
+###read in .geojson conver to WKT###
+####################################
+print('reading geojson and convert to WKT...')
+wkt = geojson_to_wkt(read_geojson(subpoly_path))
+geom = WKTReader().read(wkt)
+print('reading geojson and convert to WKT done!')
+
+#######################################   
+###band and spatial subset of stacks###
+#######################################
+
+print('Subsetting stacks...')
+stack = ProductIO.readProduct(inpath)
+band_names = list(stack.getBandNames())
+
+parameters = HashMap()
+parameters.put('geoRegion', geom)
+#parameters.put('sourceBands', band_names)
+parameters.put('copyMetadata', True)
+
+    
+sub_stack = GPF.createProduct("Subset", parameters, stack)
+del stack
+ProductIO.writeProduct(sub_stack, outpath_substack, 'BEAM-DIMAP')
+del sub_stack
+print('Subsetting stack done!')
+```
+
+###Interferogram formation
+
+Now it is time to process interferograms with the stacked and subseted data. Since SNAP 6.0 is available some steps have changed from the original workflow introduces by [katherine](http://forum.step.esa.int/t/workflow-between-snap-and-stamps/3211/152?u=thho). With the current version, it is possible to add needed data as lat, lon and elevation bands in one step and even terrain correction afterwards is not needed any more to avoid a shifting effect, which were seen in previous versions, [tested and reported by FeiLiu here](http://forum.step.esa.int/t/how-to-prepare-sentinel-1-images-stack-for-psi-sbas-in-snap-5/4981/390?u=thho).
+
+Select your subset and go to Radar &#8680; Interferometric &#8680; Products &#8680; Interferogram Formation. Name the product to be written *stack_deb_sub_ifg.dim*. In Processing Parameters... enable *Subtract flat earth phase, Subtract topographic phase, Output Elevation and Output Orthorectified Lat/Lon*. Hit *Run*.
+
+###StaMPS Export
+
+Finally...we can export to StaMPS and the stopover will be reached soon!  
+Create a target folder named INSAR_master_date like INSAR_20170310 where the date yyyymmdd denotes the maste date.
+
+```{bash eval=FALSE}
+#in terminal
+mkdir /home/thho/PSI/INSAR_20170310/
+``` 
+
+In SNAP, go to Radar &#8680; Interferometric &#8680; PSI/SBAS &#8680; Export StaMPS. As input select the two products 
+*stack_deb_sub.dim* and *stack_deb_sub_ifg.dim*, whereby the debursted stack must be on top. The target folder is the folder which was created just before INSAR_master_date. Hit *Run*.
+
+The folder INSAR_master_date has to look like this:
+
+```{bash eval=FALSE}
+ls /home/thho/PSI/INSAR_20170310/
+```
+
+##StaMPS PS analysis
+
+###Preparation
+
+As mentioned in [Configuration], the StaMPS_CONFIG.bash must be called in each terminal which is opened to work with StaMPS. That means, the terminal which is opened must not be closed. For instance, Matlab, which will call scripts from the StaMPS installation, must be called from this terminal only and not via the application launcher or something similar.
+
+The steps described below are just a brief workflow of StaMPS, I really recommend to read the [StaMPS handbook](https://homepages.see.leeds.ac.uk/~earahoo/stamps/StaMPS_Manual_v3.3b1.pdf) where the steps and parameters are described in detail!
+
+```{bash eval=FALSE}
+#open terminal (further StaMPS-terminal) and close it when you finished all steps in StaMPS
+source /home/thho/StaMPS_v3.3b1/StaMPS_CONFIG.bash
+
+#<yyyymmdd> must be the date of the master
+mt_prep_gamma_snap <yyyymmdd> /home/thho/PSI/INSAR_master_date/ 0.4
+```
+
+During processing, check if there are no warnings for Zero mean values! If there are warnings for a specific date, this image is corrupt and the whole preprocessing has to be done again, therefore it is crucial to check the results after the step Split-Orbit File apply, because there the errors mostly occur.
+
+###Test Matlab
+
+Before we use the first Matlab script, we should check if Matlab works properly.
+
+```{bash eval=FALSE}
+#in StaMPS-terminal
+matlab
+``` 
+
+Matlab opens and we can try:
+
+```{octave eval=FALSE}
+getparm
+```
+
+A list of parameters should be returned, if not, check section [Configuration] and your PATH variable.
+
+###Step 1 to 6
+
+Now it is more or less technically 'easy' to analyse PS with StaMPS.
+
+StaMPS for PS consists of seven steps, where you can repeat step six after you had once run step seven. You are able to run StaMPS complete like this:
+
+```{octave eval=FALSE}
+stamps(1,8)
+```
+
+But to know what is happening, it is a good idea to start with executing each step by step. The first number of the two parameters is the beginning step the second the last step. To just run the first step, do:
+
+```{octave eval=FALSE}
+stamps(1,1)
+```
+
+###Plotting with StaMPS
+
+After Step five, you have the option to plot the wrapped phase, to check them visually. The command in matlab is:
+
+```{octave eval=FALSE}
+ps_plot('w')
+```
+
+This produced an error in my case, because of a break command in the Matlab script parseplotprm.m. This may occur in some other plot commands too, it did in my case. But it is easy to fix this. The error will tell you in which line the break command occurs, just go to the matlab folder of your StaMPS installation, open the affected script and command (%) the whole line and save the script. In Matlab, call the same plot again and it should work.
+
+After all, you should be able to process your data.
+
+#Bibliography {-}
