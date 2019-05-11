@@ -1,0 +1,247 @@
+---
+title: "Processing Sentinel Data"
+subtitle: "General Setup for processing"
+author: "Thorsten Höser, thorsten.hoser@gmail.com, [Researchgate](https://www.researchgate.net/profile/Thorsten_Hoeser), [GitHub](https://github.com/thho)"
+
+date: "`r paste(Sys.Date())`"
+output:
+  html_document:
+    fig_caption: true
+    fig_crop: true
+    toc: true
+    toc_float: 
+      smooth_scroll: true
+      collapsed: false
+    toc_depth: 3
+    number_sections: false
+urlcolor: blue
+fontsize: 11pt
+---
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, eval=FALSE}
+library(png)
+library(grid)
+library(jpeg)
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<!--
+<center><img src="./coverimage/cover_lecture.png" width="800" align="middle"></center>
+-->
+
+#About this document
+
+The document focusses on setting up an environment in which data acquisition, processing and visualisation of Sentinel data with free or OS software is possible. Thereby, it is not important if the system is a local machine or a cloud based instance.  
+The document starts with a very plain and basic installation of Python and SNAP, continues with configuration and installation of other software for further processing. Important to mention is that all instructions were tested on an Ubuntu 18.04.02 LTS Bionic Beaver OS. A UNIX based OS of some kind is therefore essential and highly recommended to use this guide.
+
+#Installations
+
+##Python 2.7
+
+To install Python I use Anaconda2. I would recommend doing this for several reasons, for instance, you can easily set up a new Python environment with conda for other projects, without messing up Python and module versions etc. Using Anaconda to hanlde all your needs with Python versions of all kinds works surprisingly smooth.
+
+[Here](https://docs.anaconda.com/anaconda/install/linux) are the steps I followed for installation, a short summary:
+
+Go to https://www.anaconda.com/download/#linux and download Anaconda2.
+
+```{bash eval=FALSE}
+#in terminal
+#maybe you have to change the version number
+bash ~/Downloads/Anaconda2-5.3.1-Linux-x86_64.sh
+#agree to the license terms 
+#choose an installation folder
+#add anaconda installation to the PATH environment
+```
+
+##Spyder
+
+As development environment I use Spyder to develop new scripts. Again, you can choose what you like to use. For editing existing scripts, I often just use Kate (or an other editor like vim or nano) and later run the scripts from terminal. So we will work with both, Kate, vim or nano which are often installed depending on the Unix distribution you have chosen and Spyder. Spyder should be installed if you have installed Anaconda, therfore close the terminal, open a new one and try:
+
+```{bash eval=FALSE}
+spyder
+#Spyder should open, it maybe take some time, be patient
+#if not do
+sudo apt install spyder
+```
+
+##SNAP Toolbox
+
+Go to http://step.esa.int/main/download/ and download **Sentinel Toolboxes Unix 64-bit**. Here the installation of version 6 is shown, if a later version exists, install the latest version!
+
+```{bash eval=FALSE}
+#in terminal
+#navigate to the Download directory
+cd Downloads
+#do not use sudo for installation
+chmod +x esa-snap_sentinel_unix_6_0.sh
+./esa-snap_sentinel_unix_6_0.sh
+```
+
+Follow the instructions and **do not configure Python during the installation.** You can do that, but we will do it in the next step manually. Run SNAP's UI and update the program, lower right corner, green check mark symbol. If you get an error message telling you the *WWWorld Viewer* can not be launched you have probably missed to install your graphic drivers. Go to the *application launcher* and search for *drivers* and open the *Driver Manager*, install the needed drivers for your system.
+
+Close SNAP.
+
+###Configure snappy SNAP - Python interface
+
+In 5.x I faced some trouble doing this, since the 6.0 release it works fine again. Before starting the configuration, install jpy a Java - Python interface, hence SNAP is written in Java. Problems were reported when using Ubuntu 16.04, try to update to 18.04.02 LTS or later.
+
+```{bash eval=FALSE}
+#in terminal
+sudo apt install python-jpy
+``` 
+
+I configured snappy by following [these guide](https://senbox.atlassian.net/wiki/spaces/SNAP/pages/50855941/Configure+Python+to+use+the+SNAP-Python+snappy+interface).
+
+It tells you to do:
+
+```{bash eval = FALSE}
+#in terminal
+cd <snap-install-dir>/bin
+./snappy-conf /home/<user>/anaconda2/bin/python
+```
+
+If it works, go to /home/\<user\>/.snap/snap-python/ and copy the snappy folder to the site-package folder of your python installation /home/\<user\>/anaconda2/lib/python2.7/site-packages/
+
+```{bash eval=FALSE}
+cp -r /home/<user>/.snap/snap-python/snappy /home/<user>/anaconda2/lib/python2.7/site-packages
+```
+
+To test if all is right, call python:
+
+```{bash eval=FALSE}
+python
+```
+
+and run this lines in python, use F9 to run selected lines or the line your courser is in, when using spyder.
+
+```{python eval=FALSE}
+from snappy import ProductIO
+p = ProductIO.readProduct('/home/<user>/.snap/snap-python/snappy/testdata/MER_FRS_L1B_SUBSET.dim')
+list(p.getBandNames())
+```
+
+your output should look like this:
+
+['radiance_1',
+ 'radiance_2',
+ 'radiance_3',
+ 'radiance_4',
+ 'radiance_5',
+ 'radiance_6',
+ 'radiance_7',
+ 'radiance_8',
+ 'radiance_9',
+ 'radiance_10',
+ 'radiance_11',
+ 'radiance_12',
+ 'radiance_13',
+ 'radiance_14',
+ 'radiance_15',
+ 'l1_flags',
+ 'detector_index']
+
+If the configuration returns an error, I followed the hints found in the Step Forum by [marpet](http://forum.step.esa.int/users/marpet/activity) on the 19th of September [in this thread](http://forum.step.esa.int/t/snappy-installation-on-linux-redhat-6-9/7091/4).
+
+Copy the snappy folder /home/\<user\>/.snap/snap-python/snappy/ to the site-package folder of your python installation /home/\<user\>/anaconda3/lib/python2.7/site-packages/.
+
+```{bash eval=FALSE}
+cp -r /home/<user>/.snap/snap-python/snappy /home/<user>/anaconda2/lib/python2.7/site-packages
+```
+
+I think, the snappy folder you have just copied, was created when you tried to configure snappy and it ended with an error, therefore the snappy.ini file in the folder is empty by now. Enter the copied folder and create or overwrite a file named snappy.ini with a text editor including this content:
+
+[DEFAULT]  
+snap_home = /home/\<user\>/snap  
+java_max_mem: 21G  
+# the java_max_mem value should be 70-80% of your overall RAM  
+# snap_start_engine: False  
+# java_class_path: ./target/classes  
+# java_library_path: ./lib  
+# java_options: -Djava.awt.headless=false  
+# debug: False  
+
+To test if all is right,
+
+```{bash eval=FALSE}
+#in terminal
+python
+```
+
+and run this lines
+
+```{python eval=FALSE}
+from snappy import ProductIO
+p = ProductIO.readProduct('/home/<user>/.snap/snap-python/snappy/testdata/MER_FRS_L1B_SUBSET.dim')
+list(p.getBandNames())
+```
+
+your output should look like this:
+
+['radiance_1',
+ 'radiance_2',
+ 'radiance_3',
+ 'radiance_4',
+ 'radiance_5',
+ 'radiance_6',
+ 'radiance_7',
+ 'radiance_8',
+ 'radiance_9',
+ 'radiance_10',
+ 'radiance_11',
+ 'radiance_12',
+ 'radiance_13',
+ 'radiance_14',
+ 'radiance_15',
+ 'l1_flags',
+ 'detector_index']
+
+##sentinelsat
+
+Sentinelsat allows you to enter ESA's Copernicus Open Access Hub very comfortable to download remote sensing data. Have a [look here](http://sentinelsat.readthedocs.io/en/stable/index.html). [And you need to have an account, which is free](https://scihub.copernicus.eu/dhus/#/home)!
+
+```{bash eval=FALSE}
+sudo apt install python-pip 
+pip install sentinelsat
+```
+
+##pygeoj
+
+pygeoj is a python module to read, write and work with the GeoJSON format.
+Have a [look here](http://pythonhosted.org/PyGeoj/).
+
+```{bash eval=FALSE}
+pip install pygeoj
+```
+
+
+##R
+
+[R](https://www.r-project.org/) is used for some data converting and postprocessing as well as visualizing results. 
+
+```{bash eval=FALSE}
+#install R
+sudo add-apt-repository 'deb https://cloud.r-project.org/bin/linux/ubuntu bionic-cran35/'
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E084DAB9
+sudo apt update
+sudo apt install r-base r-base-core r-recommended
+sudo add-apt-repository ppa:marutter/c2d4u3.5
+sudo apt-get update
+sudo apt install r-cran-rgl r-cran-rjags r-cran-snow r-cran-ggplot2 r-cran-igraph r-cran-lme4 r-cran-rjava r-cran-devtools r-cran-roxygen2 r-cran-rjava r-cran-xlsx
+sudo add-apt-repository 'deb http://ppa.launchpad.net/ubuntugis/ubuntugis-unstable/ubuntu bionic main '
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 314DF160
+sudo apt update
+sudo apt install libgdal-dev libproj-dev libgeos-dev libudunits2-dev libv8-dev libcairo2-dev libnetcdf-dev gdebi libxml2-dev libssl-dev libcurl4-openssl-dev libopenblas-dev
+sudo apt install r-cran-gstat r-cran-maps r-cran-mapdata r-cran-ncdf4 r-cran-sp r-cran-sp r-cran-raster r-cran-spatstat r-cran-geor r-cran-ggmap r-cran-leaflet r-cran-rgeos r-cran-stringi r-cran-magrittr
+```
+
+R-Studio is a development environment for R and also other languages, visit the [R-Studio website](https://www.rstudio.com/products/rstudio/download/) to install the latest version.
+
+```{bash eval=FALSE}
+#install RStudio
+cd ~/Downloads
+wget https://download1.rstudio.org/rstudio-xenial-1.1.463-amd64.deb
+sudo gdebi rstudio-xenial-1.1.463-amd64.deb
+```
